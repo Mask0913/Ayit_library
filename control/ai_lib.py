@@ -275,7 +275,7 @@ class auto_win(QMainWindow):
         data = {}
         html = requests.get(url, headers=headers, verify=False, cookies=cookies)
         print(html.text)
-        if (len(html.text) < 40):
+        if (len(html.text) < 45):
             QMessageBox.information(self, '提示', '需要占位置的数据有误，请检查user_data.txt文件', QMessageBox.Yes)
             exit()
         x = json.loads(html.text)
