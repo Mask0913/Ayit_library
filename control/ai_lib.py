@@ -258,17 +258,24 @@ class auto_win(QMainWindow):
 
     def get_id(self, account, password):
         url = 'https://www.360banke.com/xiaotu/interface/ayit/user_login.asp?libid=ayit&username=' + account + '&password=' + password
-        headers = {'Host': 'www.360banke.com', 'Connection': 'keep-alive',
-                   'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Fire fox";v="90"', 'sec-ch-ua-mobile': '?0',
-                   'User-Agent': 'LogStatistic', 'Accept': '*/*', 'Origin': 'http://211.84.229.61',
-                   'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty',
-                   'Referer': 'http://211.84.229.61/', 'Accept-Encoding': 'gzip, deflate, br',
+        headers = {'Host': 'www.360banke.com',
+                   'Connection': 'keep-alive',
+                   'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+                   'sec-ch-ua-mobile': '?0',
+                   'User-Agent': 'LogStatistic',
+                   'Accept': '*/*',
+                   'Origin': 'http://211.84.229.61',
+                   'Sec-Fetch-Site': 'cross-site',
+                   'Sec-Fetch-Mode': 'cors',
+                   'Sec-Fetch-Dest': 'empty',
+                   'Referer': 'https://www.360banke.com/xiaotu/index.html?libid=ayit',
+                   'Accept-Encoding': 'gzip, deflate, br',
                    'Accept-Language': 'zh-CN,zh;q=0.9'}
-        cookies = {'ASPSESSIONIDSWRQQCBS': 'FBJFACEDBGFJHEEOLEKONNFE'}
+        cookies = {}
         data = {}
         html = requests.get(url, headers=headers, verify=False, cookies=cookies)
-        print(len(html.text))
-        if (len(html.text) < 30):
+        print(html.text)
+        if (len(html.text) < 40):
             QMessageBox.information(self, '提示', '需要占位置的数据有误，请检查user_data.txt文件', QMessageBox.Yes)
             exit()
         x = json.loads(html.text)
