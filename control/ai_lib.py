@@ -152,7 +152,7 @@ class Mythread3(QThread):
                         m = Mythread2(thread_pool[i].userid, thread_pool[i].seatPlace)
                         m.start()
                         not_get_thread_pool.append(m)
-                elif thread_pool[i].status == 2:
+                elif thread_pool[i].status == 1:
                     self._signal.emit('{}位置已经抢到'.format(thread_pool[i].seatPlace))
                 time.sleep(0.2)
                 n += 1
