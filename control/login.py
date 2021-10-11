@@ -30,22 +30,26 @@ class Login(QMainWindow):
             self.UI.password.setText(self.yourkey)
     #登录
     def login(self):
-        peopleId = self.UI.account.text()
-        peoplePassword = self.UI.password.text()
-        if len(peopleId) is 0 or len(peoplePassword) is 0:
-            QMessageBox.information(self, '提示','账号或密码不能为空！',QMessageBox.Yes)
-            return
-        elif peoplePassword in self.key and len(peoplePassword) > 8:
-            self.f = open('key.txt', 'w')
-            self.f.write(str(peoplePassword))
-            self.f.close()
-            QMessageBox.information(self, '提示', '登录成功', QMessageBox.Yes)
-            autowin_ = auto_win()
-            autowin_.show()
-            self.close()
-        else:
-            QMessageBox.information(self, '提示','账号或密码错误',QMessageBox.Yes)
 
+        autowin_ = auto_win()
+        autowin_.show()
+        self.close()
+
+        # peopleId = self.UI.account.text()
+        # peoplePassword = self.UI.password.text()
+        # if len(peopleId) is 0 or len(peoplePassword) is 0:
+        #     QMessageBox.information(self, '提示','账号或密码不能为空！',QMessageBox.Yes)
+        #     return
+        # elif peoplePassword in self.key and len(peoplePassword) > 8:
+        #     self.f = open('key.txt', 'w')
+        #     self.f.write(str(peoplePassword))
+        #     self.f.close()
+        #     QMessageBox.information(self, '提示', '登录成功', QMessageBox.Yes)
+        #     autowin_ = auto_win()
+        #     autowin_.show()
+        #     self.close()
+        # else:
+        #     QMessageBox.information(self, '提示','账号或密码错误',QMessageBox.Yes)
     #注册
     def register(self):
         QMessageBox.information(self, '提示', '请联系管理员',QMessageBox.Yes)

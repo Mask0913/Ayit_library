@@ -10,7 +10,7 @@ from magic import magic
 import datetime
 from tools import users
 import requests
-import _thread
+import threading
 from PyQt5.QtCore import *
 import json
 import time
@@ -18,83 +18,71 @@ import socket
 import PyQt5.sip
 
 
-class Thread(QThread):
+class Mythread(QThread):
     _signal = pyqtSignal(str)
-    def __init__(self,userid, seatid,username):
-        super(Thread, self).__init__()
+    def __init__(self,userid,seatid,seatPlace):
+        super().__init__()
         self.userid = userid
         self.seatid = seatid
-        self.username = username
+        self.status = 3
+        self.seatPlace = seatPlace
+
     def run(self):
-        #今天的坑
-        x = str(datetime.datetime.now())
-        start_time = x[0:10] + '%20' + x[11:16]
-        end_time = x[0:10] + '%2022:30'
-        #明天的坑
-        # tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-        # start_time = tomorrow + '%2007:00'
-        # end_time = tomorrow + '%2022:30'
+        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        starttime = tomorrow + '%2007:00'
+        endtime = tomorrow + '%2022:30'
         url = 'https://www.360banke.com/xiaotu/Seatresv/seatorder.asp?number=0.5260297873297035&userid={}&seatid={}' \
-              '&validtime={}&invalidtime={}'.format(self.userid, self.seatid, start_time, end_time)
-        headers = {'Host': 'www.360banke.com', 'Connection': 'keep-alive',
+              '&validtime={}&invalidtime={}'.format(self.userid, self.seatid, starttime, endtime)
+        headers = {'Host': 'www.360banke.com',
                    'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
-                   'sec-ch-ua-mobile': '?0', 'User-Agent': 'LogStatistic', 'Accept': '*/*',
-                   'Origin': 'http://211.84.229.61', 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'cors',
-                   'Sec-Fetch-Dest': 'empty', 'Referer': 'http://211.84.229.61/',
+                   'sec-ch-ua-mobile': '?0',
+                   'User-Agent': 'LogStatistic',
+                   'Accept': '*/*',
+                   'Origin': 'http://211.84.229.61',
+                   'Sec-Fetch-Site': 'cross-site',
+                   'Sec-Fetch-Mode': 'cors',
+                   'Sec-Fetch-Dest': 'empty',
+                   'Referer': 'https://www.360banke.com/xiaotu/index.html?libid=ayit',
                    'Accept-Encoding': 'gzip, deflate, br',
                    'Accept-Language': 'zh-CN,zh;q=0.9'}
         cookies = {}
         data = {}
+        s = requests.session()
+        s.keep_alive = False  # 关闭多余连接
         try:
             html = requests.get(url, headers=headers, verify=False, cookies=cookies)
-        except Exception as e:
-            pass
-        result = str(html.text)
-        print(self.username + str(result) + str(datetime.datetime.now()))
-        self._signal.emit(result)
-
-class Thread2(QThread):
-    _signal = pyqtSignal(str)
-    def __init__(self, userid):
-        super(Thread2, self).__init__()
-        self.userid = userid
-    def run(self):
-        self.seatid = self.get_random_seatid()
-        if self.seatid == False:
-            self.sleep(6)
-            self._signal.emit('一个坑都没有了，真的没办法了')
-        else:
-            #今天的坑
-            x = str(datetime.datetime.now())
-            start_time = x[0:10] + '%20' + x[11:16]
-            end_time = x[0:10] + '%2022:30'
-
-            # 明天的坑
-            # tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-            # start_time = tomorrow + '%2007:00'
-            # end_time = tomorrow + '%2022:30'
-            url = 'https://www.360banke.com/xiaotu/Seatresv/seatorder.asp?number=0.5260297873297035&userid={}&seatid={}' \
-                  '&validtime={}&invalidtime={}'.format(self.userid, self.seatid, start_time, end_time)
-            headers = {'Host': 'www.360banke.com', 'Connection': 'keep-alive',
-                       'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
-                       'sec-ch-ua-mobile': '?0', 'User-Agent': 'LogStatistic', 'Accept': '*/*',
-                       'Origin': 'http://211.84.229.61', 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'cors',
-                       'Sec-Fetch-Dest': 'empty', 'Referer': 'http://211.84.229.61/',
-                       'Accept-Encoding': 'gzip, deflate, br',
-                       'Accept-Language': 'zh-CN,zh;q=0.9'}
-            cookies = {}
-            data = {}
-            html = requests.get(url, headers=headers, verify=False, cookies=cookies)
             result = str(html.text)
-            self.sleep(6)
-            self._signal.emit(result)
+            if '同时' in result:
+                self.status = 1
+                self._signal.emit("Don't do anything for more than two times!   位置：{}".format(self.seatPlace))
+            elif "已被" in result:
+                self.status = 2
+                self._signal.emit('          垃圾小霸王服务器，占不到坑   位置：{}   '.format(self.seatPlace))
+            elif '成功' in result:
+                self.status = 1
+                self._signal.emit(result)
+                self._signal.emit('        s  注意我的解题手法     位置：{}   '.format(self.seatPlace))
+            elif '失败' in result:
+                self.status = 0
+                self._signal.emit('还没到点，急个啥？   位置：{}   '.format(self.seatPlace))
+            else:
+                self.status = 0
+                #self._signal.emit('Http1.2 精妙无比   位置：{}   '.format(self.seatPlace))
+        except Exception as e:
+            self.status = 0
+            self._signal.emit(e)
+            self._signal.emit('啥几把玩意服务器代码报错   位置：{}   '.format(self.seatPlace))
 
-    def get_random_seatid(self):
-        self._signal.emit('没有你想要的坑，下面为你随机一个坑')
-        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-        start_time = tomorrow + '%2007:00'
-        end_time = tomorrow + '%2022:30'
-        url = 'https://www.360banke.com/xiaotu/Seatresv/RandomSeat.asp?libid=ayit&mapid=830&userid=12345&number=0.6922689160823745&starttime={}&endtime={}'.format(start_time,end_time)
+class Mythread2(QThread):
+    def __init__(self, userid, number):
+        super().__init__()
+        self.userid = userid
+        self.oldseat = number
+        self.seat = 'None'
+        self.seatid = 'None'
+        self.flag = 0
+    def run(self):
+        url = 'https://www.360banke.com/xiaotu/seatresv/RandomSeatQuick/RandomSeatorder/?userid={}&libid=ayit&code=0&state=1&result=1&username=18031110221&openid=0'.format(self.userid)
         headers = {'Host': 'www.360banke.com', 'Connection': 'keep-alive',
                    'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
                    'sec-ch-ua-mobile': '?0', 'User-Agent': 'LogStatistic', 'Accept': '*/*',
@@ -103,20 +91,74 @@ class Thread2(QThread):
                    'Accept-Encoding': 'gzip, deflate, br', 'Accept-Language': 'zh-CN,zh;q=0.9'}
         cookies = {'ASPSESSIONIDQURRRDAS': 'AHBMNKODIBJKFLPOJMIOKKNK'}
         data = {}
+        try:
+            html = requests.get(url, headers=headers, verify=False, cookies=cookies)
+            result = str(html.text)
+            print(result)
+            if '成功' in result:
+                self.seat = 'OK'
+            else:
+                self.run()
+        except:
+            time.sleep(1)
+            self.run()
 
-        html = requests.get(url, headers=headers, verify=False, cookies=cookies)
-        print(html.text)
-        x = json.loads(html.text)
-        if x['msg'] == "":
-            print(x['seatid'])
-            print(x['areatag'])
-            print(x['seatnum'])
-            return x['seatid']
-        else:
-            return False
-
-
-
+class Mythread3(QThread):
+    _signal = pyqtSignal(str)
+    def __init__(self, userlist, call_backlog):
+        super().__init__()
+        self.user_list = userlist
+        self.call_backlog = call_backlog
+        self.stop_flag = 0
+    def run(self):
+        n = 0
+        thread_pool = []
+        not_get = []
+        for i in self.user_list:
+            try:
+                thread_pool.append(Mythread(i[0], i[4], i[1]))
+                thread_pool[n].start()
+            except Exception as e:
+                print(e)
+            n += 1
+            time.sleep(0.2)
+        thread_pool = []
+        n = 0
+        for i in self.user_list:
+            try:
+                thread_pool.append(Mythread(i[0], i[4], i[1]))
+                thread_pool[n]._signal.connect(self.call_backlog)
+                thread_pool[n].start()
+            except Exception as e:
+                print(e)
+            n += 1
+            time.sleep(0.2)
+        self._signal.emit('启动监控线程，出现预约失败的包，重新预约')
+        not_get_thread_pool = []
+        while n < 4500:
+            for i in range(0, len(thread_pool)):
+                if thread_pool[i].status == 0:
+                    try:
+                        m = Mythread(thread_pool[i].userid, thread_pool[i].seatid, thread_pool[i].seatPlace)
+                        m._signal.connect(self.call_backlog)
+                        m.start()
+                        thread_pool[i] = m
+                    except:
+                        pass
+                    print('{}预约失败,重新预约'.format(thread_pool[i].seatPlace))
+                elif thread_pool[i].status == 2:
+                    if thread_pool[i].seatPlace not in not_get:
+                        self._signal.emit('{}位置没抢到，随机抢一个'.format(thread_pool[i].seatPlace))
+                        not_get.append(thread_pool[i].seatPlace)
+                        m = Mythread2(thread_pool[i].userid, thread_pool[i].seatPlace)
+                        m.start()
+                        not_get_thread_pool.append(m)
+                elif thread_pool[i].status == 2:
+                    self._signal.emit('{}位置已经抢到'.format(thread_pool[i].seatPlace))
+                time.sleep(0.2)
+                n += 1
+            if self.stop_flag == 1:
+                break
 
 class auto_win(QMainWindow):
     def __init__(self):
@@ -129,13 +171,14 @@ class auto_win(QMainWindow):
         self.UI.register_2.clicked.connect(lambda: self.register())
         self.UI.cancle_seat.clicked.connect(lambda: self.cancle())
         self.UI.see_seat.clicked.connect(lambda: self.see_seat())
-        self.UI.magic.clicked.connect(lambda: self.magic1())
+        self.UI.magic.clicked.connect(lambda: self.stop_takeseat())
         self.UI.layout.clicked.connect(lambda: self.lay())
         self.thread = None  # 初始化线程
         self.n = 0
         self.thread2 = []
         self.thread_pool = []
         self.get_user_data()
+        self.take_seat_thread = None
 
     def eidtor_user_data(self):
         edite_user_ = admin_grasping(auto_win)
@@ -149,29 +192,17 @@ class auto_win(QMainWindow):
         self.console.moveCursor(QTextCursor.End)
 
     def take_seat(self):
-        x = str(datetime.datetime.now())[11:18]
-        if x > '19:55':
-            self.sent_txt('19:55在来，现在急个啥')
-        else:
-            while True:
-                if x < '19:59':
-                    self.sent_txt('现在开始占坑')
-                    n = 0
-                    while n < 10:
-                        for i in self.user_list:
-                            self.x = Thread(i[0], i[4], i[2])
-                            self.x._signal.connect(self.call_backlog)
-                            self.thread_pool.append(self.x)
-                            self.thread_pool[n].start()
-                            n += 1
-                    break
-                else:
-                    self.sent_txt('等19:59')
-                    self.sleep(1)
+        self.take_seat_thread = Mythread3(self.user_list, self.call_backlog)
+        self.take_seat_thread._signal.connect(self.call_backlog)
+        self.take_seat_thread.start()
+        time.sleep(1)
 
-        # self.thread = users(self.user_list, 1)
-        # self.thread._signal.connect(self.call_backlog)  # 进程连接回传到GUI的事件
-        # self.thread.start()
+    def stop_takeseat(self):
+        try:
+            self.take_seat_thread.stop_flag = 1
+        except:
+            QMessageBox.information(self, '提示', '还没开始停个啥？', QMessageBox.Yes)
+        self.sent_txt('停止占位置')
 
     def cancle(self):
         self.thread = users(self.user_list, 2)
@@ -190,37 +221,18 @@ class auto_win(QMainWindow):
 
     def call_backlog(self, msg):
         self.sent_txt(msg)  # 将线程的参数传入进度条
-        if msg == '19:55在来，现在急个啥':
-            QMessageBox.information(self, '提示', '19:55在来，现在急个啥', QMessageBox.Yes)
-        if '已被他人预约' in msg and self.n == 0:
-            for i in self.user_list:
-                self.y = Thread2(i[0])
-                self.y._signal.connect(self.call_backlog)
-                self.thread2.append(self.y)
-                self.thread2[self.n].start()
-                self.n += 1
-
-
 
     def see_seat(self):
         self.see = admin_login()
         self.see._signal.connect(self.call_back_see)
         self.see.show()
 
+
     def magic1(self):
         self.mg = magic()
         self.mg._signal.connect(self.call_back_mgc)
         self.mg.show()
 
-    def call_back_mgc(self, msg):
-        self.sent_txt(msg)
-        now = str(datetime.datetime.now())
-        filename = now[0:10] + '.txt'
-        if not os.path.exists(filename):
-            self.sent_txt('找不到当天的座位信息文件')
-            self.sent_txt('开始下载')
-            self.download()
-        self.magic2(msg)
 
     def call_back_see(self, msg):
         if msg == '1':
@@ -258,17 +270,24 @@ class auto_win(QMainWindow):
 
     def get_id(self, account, password):
         url = 'https://www.360banke.com/xiaotu/interface/ayit/user_login.asp?libid=ayit&username=' + account + '&password=' + password
-        headers = {'Host': 'www.360banke.com', 'Connection': 'keep-alive',
-                   'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Fire fox";v="90"', 'sec-ch-ua-mobile': '?0',
-                   'User-Agent': 'LogStatistic', 'Accept': '*/*', 'Origin': 'http://211.84.229.61',
-                   'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty',
-                   'Referer': 'http://211.84.229.61/', 'Accept-Encoding': 'gzip, deflate, br',
+        headers = {'Host': 'www.360banke.com',
+                   'Connection': 'keep-alive',
+                   'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+                   'sec-ch-ua-mobile': '?0',
+                   'User-Agent': 'LogStatistic',
+                   'Accept': '*/*',
+                   'Origin': 'http://211.84.229.61',
+                   'Sec-Fetch-Site': 'cross-site',
+                   'Sec-Fetch-Mode': 'cors',
+                   'Sec-Fetch-Dest': 'empty',
+                   'Referer': 'https://www.360banke.com/xiaotu/index.html?libid=ayit',
+                   'Accept-Encoding': 'gzip, deflate, br',
                    'Accept-Language': 'zh-CN,zh;q=0.9'}
-        cookies = {'ASPSESSIONIDSWRQQCBS': 'FBJFACEDBGFJHEEOLEKONNFE'}
+        cookies = {}
         data = {}
         html = requests.get(url, headers=headers, verify=False, cookies=cookies)
-        print(len(html.text))
-        if (len(html.text) < 30):
+        print(html.text)
+        if (len(html.text) < 40):
             QMessageBox.information(self, '提示', '需要占位置的数据有误，请检查user_data.txt文件', QMessageBox.Yes)
             exit()
         x = json.loads(html.text)
@@ -276,83 +295,6 @@ class auto_win(QMainWindow):
         user_name = x['nickname']
         return userid, user_name
 
-    def download(self):
-        client = socket.socket()
-        client.connect(("1.116.4.250", 1234))
-        now = str(datetime.datetime.now())
-        now = now[0:10] + '.txt'
-        while True:
-            cmd = 'get ' + now
-            if len(cmd) == 0: continue
-            if cmd.startswith("get"):
-                client.send(cmd.encode())  # 发送请求
-                server_response = client.recv(1024)
-                if server_response.decode().startswith("not"):
-                    print("请输入有效文件名")
-                    continue
-                client.send(b"ready to recv file")  # 发送确认
-                file_size = int(server_response.decode())  # 获取文件大小
-                rece_size = 0
-                filename = cmd.split()[1]
-                f = open(filename, "wb")
-                while rece_size < file_size:
-                    if file_size - rece_size > 1024:  # 要收不止一次
-                        size = 1024
-                    else:  # 最后一次了，剩多少收多少,防止之后发送数据粘包
-                        size = file_size - rece_size
-                    recv_data = client.recv(size)
-                    rece_size += len(recv_data)  # 累加接受数据大小
-                    f.write(recv_data)  # 写入文件,即下载
-                else:
-                    self.sent_txt("文件下载完成")
-                    f.close()
-                    time.sleep(1)
-                    client.close()
-                    break
-
-    def magic2(self, seat):
-        now = str(datetime.datetime.now())
-        filename = now[0:10] + '.txt'
-        f = open(filename, 'r')
-        temp = f.read()
-        seats = eval(temp)
-        f.close()
-        f = open('seat.txt','r')
-        dic = f.read()
-        dic = eval(dic)
-        f.close()
-        try:
-            seatid = dic[seat][0]
-            userid = seats[seat]
-            self.get_away(userid, seatid)
-            self.to_cancle(userid, self.get_cancle_id(userid))
-            self.sent_txt('你可真是个好人\n')
-        except:
-            self.sent_txt('找不到此人')
-
-    def magic3(self, seat1, seat2):
-        now = str(datetime.datetime.now())
-        filename = now[0:10] + '.txt'
-        f = open(filename, 'r')
-        temp = f.read()
-        seats = eval(temp)
-        f.close()
-        f = open('seat.txt','r')
-        dic = f.read()
-        dic = eval(dic)
-        f.close()
-        try:
-            seatid1 = dic[seat1][0]
-            seatid2 = dic[seat2][0]
-            userid1 = seats[seat1]
-            userid2 = seats[seat2]
-            self.get_away(userid1, seatid1)
-            self.get_away(userid2, seatid2)
-            self.to_cancle(userid1, self.get_cancle_id(userid1))
-            self.to_cancle(userid2, self.get_cancle_id(userid2))
-            self.sent_txt('你可真是个好人\n')
-        except:
-            self.sent_txt('找不到此人')
 
     def get_away(self, userid, seatid):
         url = 'https://www.360banke.com/xiaotu/Seatresv/CheckOut.asp?libid=ayit&seatid={}&userid={}&number=0.03153986302655798'.format(

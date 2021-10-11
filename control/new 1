@@ -1,1 +1,0 @@
-pyinstaller -F -w login.py -p admin_grasping2.py,ai_lib.py,ai_lib2.py,edite_user.py,login2.py,magic.py,magic2.py,see_seat.py,see_seat2.py,tools.py -i 1.ico

@@ -205,4 +205,4 @@ class Ui_auto_win(object):
         self.register_2.setText(_translate("auto_win", "签到"))
         self.see_seat.setText(_translate("auto_win", "看位"))
         self.eidtor_user_data.setText(_translate("auto_win", "修改用户"))
-        self.magic.setText(_translate("auto_win", "魔法"))
+        self.magic.setText(_translate("auto_win", "停止占位"))
