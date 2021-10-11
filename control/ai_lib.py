@@ -54,14 +54,14 @@ class Mythread(QThread):
             result = str(html.text)
             if '同时' in result:
                 self.status = 1
-                self._signal.emit("Don't do anything for more than two times!   位置：{}".format(self.seatPlace))
+                print("Don't do anything for more than two times!   位置：{}".format(self.seatPlace))
             elif "已被" in result:
                 self.status = 2
-                self._signal.emit('          垃圾小霸王服务器，占不到坑   位置：{}   '.format(self.seatPlace))
+                print('          垃圾小霸王服务器，占不到坑   位置：{}   '.format(self.seatPlace))
             elif '成功' in result:
                 self.status = 1
-                self._signal.emit(result)
-                self._signal.emit('        s  注意我的解题手法     位置：{}   '.format(self.seatPlace))
+                print(result)
+                print('        s  注意我的解题手法     位置：{}   '.format(self.seatPlace))
             elif '失败' in result:
                 self.status = 0
                 self._signal.emit('还没到点，急个啥？   位置：{}   '.format(self.seatPlace))
@@ -70,8 +70,8 @@ class Mythread(QThread):
                 #self._signal.emit('Http1.2 精妙无比   位置：{}   '.format(self.seatPlace))
         except Exception as e:
             self.status = 0
-            self._signal.emit(e)
-            self._signal.emit('啥几把玩意服务器代码报错   位置：{}   '.format(self.seatPlace))
+            print(e)
+            print('啥几把玩意服务器代码报错   位置：{}   '.format(self.seatPlace))
 
 class Mythread2(QThread):
     def __init__(self, userid, number):
@@ -117,6 +117,7 @@ class Mythread3(QThread):
         for i in self.user_list:
             try:
                 thread_pool.append(Mythread(i[0], i[4], i[1]))
+                thread_pool[n]._signal.connect(self.call_backlog)
                 thread_pool[n].start()
             except Exception as e:
                 print(e)
@@ -127,7 +128,6 @@ class Mythread3(QThread):
         for i in self.user_list:
             try:
                 thread_pool.append(Mythread(i[0], i[4], i[1]))
-                thread_pool[n]._signal.connect(self.call_backlog)
                 thread_pool[n].start()
             except Exception as e:
                 print(e)
@@ -140,12 +140,11 @@ class Mythread3(QThread):
                 if thread_pool[i].status == 0:
                     try:
                         m = Mythread(thread_pool[i].userid, thread_pool[i].seatid, thread_pool[i].seatPlace)
-                        m._signal.connect(self.call_backlog)
                         m.start()
                         thread_pool[i] = m
                     except:
                         pass
-                    print('{}预约失败,重新预约'.format(thread_pool[i].seatPlace))
+                    self._signal.emit('{}预约失败,重新预约(未到8:00时间或服务器繁忙)'.format(thread_pool[i].seatPlace))
                 elif thread_pool[i].status == 2:
                     if thread_pool[i].seatPlace not in not_get:
                         self._signal.emit('{}位置没抢到，随机抢一个'.format(thread_pool[i].seatPlace))
