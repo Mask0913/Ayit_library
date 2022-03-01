@@ -14,8 +14,10 @@ import threading
 from PyQt5.QtCore import *
 import json
 import time
+import random
 import socket
 import PyQt5.sip
+from vpn_cookie import vpn_cookie
 
 
 class Mythread(QThread):
@@ -26,6 +28,9 @@ class Mythread(QThread):
         self.seatid = seatid
         self.status = 3
         self.seatPlace = seatPlace
+        self.cookie = ''
+        with open('cookie.txt', 'r') as f:
+            self.cookie = f.read()
 
     def run(self):
         tomorrow = (
@@ -36,14 +41,15 @@ class Mythread(QThread):
         endtime = tomorrow + ' 22:30'
         now = str(datetime.datetime.now())
         now = now[:-7]
-        url = "libid=ayit&seatid={}&userid={}&validtime={}&invalidtime={}&number=0.6986631503360254&time={}".format(
-            self.seatid, self.userid, starttime, endtime, now)
+        token = random.random()
+        url = "libid=ayit&seatid={}&userid={}&validtime={}&invalidtime={}&number={}&time={}".format(
+            self.seatid, self.userid, starttime, endtime, token, now)
         url = self.crypto(str(url))
-        url = "https://www.360banke.com/xiaotu/Seatresv/SeatOrder.asp?" + url
+        url = "https://zwqd.ayit.edu.cn/Seatresv/SeatOrder.asp?" + url
         headers = {
-            'Host': 'www.360banke.com',
+            'Host': 'zwqd.ayit.edu.cn',
             'Connection': 'keep-alive',
-            'sec-ch-ua': '"Chromium";v="94", "Google Chrome";v="94", ";Not A Brand";v="99"',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"',
             'sec-ch-ua-mobile': '?0',
             'User-Agent': 'LogStatistic',
             'sec-ch-ua-platform': '"Windows"',
@@ -51,10 +57,11 @@ class Mythread(QThread):
             'Sec-Fetch-Site': 'same-origin',
             'Sec-Fetch-Mode': 'cors',
             'Sec-Fetch-Dest': 'empty',
-            'Referer': 'https://www.360banke.com/xiaotu/index.html?seatid=7C746671-984D-4596-9D10-E83C64922F9D&seatresv=1&libid=ayit',
+            'Referer': 'https://zwqd.ayit.edu.cn/',
             'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'zh-CN,zh;q=0.9'}
-        cookies = {'ASPSESSIONIDCUATSCTA': 'KFBPHGJDPINKMEJMDHNNIHHM'}
+        cookies = {'ASPSESSIONIDQCAQDQAD': 'MGKFIPOCACEHLPPLKGCJLLIM',
+                   'client_vpn_ticket': self.cookie}
         data = {}
         s = requests.session()
         s.keep_alive = False  # 关闭多余连接
@@ -122,24 +129,29 @@ class Mythread2(QThread):
         self.seat = 'None'
         self.seatid = 'None'
         self.flag = 0
+        self.cookie = ''
+        with open('cookie.txt', 'r') as f:
+            self.cookie = f.read()
 
     def run(self):
-        url = 'https://www.360banke.com/xiaotu/seatresv/RandomSeatQuick/RandomSeatorder/?userid={}&libid=ayit&code=0&state=1&result=1&username=18031110221&openid=0'.format(
+        url = 'https://zwqd.ayit.edu.cn/seatresv/RandomSeatQuick/RandomSeatorder/?userid={}&libid=ayit&code=0&state=1&result=1&username=18031110221&openid=0'.format(
             self.userid)
         headers = {
-            'Host': 'www.360banke.com',
+            'Host': 'zwqd.ayit.edu.cn',
             'Connection': 'keep-alive',
-            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"',
             'sec-ch-ua-mobile': '?0',
             'User-Agent': 'LogStatistic',
+            'sec-ch-ua-platform': '"Windows"',
             'Accept': '*/*',
             'Sec-Fetch-Site': 'same-origin',
             'Sec-Fetch-Mode': 'cors',
             'Sec-Fetch-Dest': 'empty',
-            'Referer': 'https://www.360banke.com/xiaotu/index.html?libid=ayit',
+            'Referer': 'https://zwqd.ayit.edu.cn/',
             'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'zh-CN,zh;q=0.9'}
-        cookies = {'ASPSESSIONIDQURRRDAS': 'AHBMNKODIBJKFLPOJMIOKKNK'}
+        cookies = {'ASPSESSIONIDQCAQDQAD': 'MGKFIPOCACEHLPPLKGCJLLIM',
+                   'client_vpn_ticket': self.cookie}
         data = {}
         try:
             html = requests.get(
@@ -245,8 +257,15 @@ class auto_win(QMainWindow):
         self.n = 0
         self.thread2 = []
         self.thread_pool = []
+        self.cookie = ''
+        with open('cookie.txt', 'r') as f:
+            self.cookie = f.read()
         self.get_user_data()
         self.take_seat_thread = None
+
+    def updae_cookie(self):
+        with open('cookie.txt', 'r') as f:
+            self.cookie = f.read()
 
     def eidtor_user_data(self):
         edite_user_ = admin_grasping(auto_win)
@@ -321,7 +340,12 @@ class auto_win(QMainWindow):
         f.close()
         user_list = []
         for i in user_data:
-            userid, user_name = self.get_id(i[0], i[1])
+            try:
+                userid, user_name = self.get_id(i[0], i[1])
+            except:
+                vpn_cookie().get_cookie()
+                self.updae_cookie()
+                userid, user_name = self.get_id(i[0], i[1])
             user_list.append([userid, i[2], i[0], user_name])
         for i in range(len(user_list)):
             try:
@@ -335,30 +359,30 @@ class auto_win(QMainWindow):
         self.sent_txt('初始化成功')
 
     def get_id(self, account, password):
-        url = 'https://www.360banke.com/xiaotu/interface/ayit/user_login.asp?libid=ayit&username=' + \
+        url = 'https://zwqd.ayit.edu.cn/interface/ayit/user_login.asp?libid=ayit&username=' + \
             account + '&password=' + password
         headers = {
-            'Host': 'www.360banke.com',
+            'Host': 'zwqd.ayit.edu.cn',
             'Connection': 'keep-alive',
-            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"',
             'sec-ch-ua-mobile': '?0',
             'User-Agent': 'LogStatistic',
+            'sec-ch-ua-platform': '"Windows"',
             'Accept': '*/*',
-            'Origin': 'http://211.84.229.61',
-            'Sec-Fetch-Site': 'cross-site',
+            'Sec-Fetch-Site': 'same-origin',
             'Sec-Fetch-Mode': 'cors',
             'Sec-Fetch-Dest': 'empty',
-            'Referer': 'https://www.360banke.com/xiaotu/index.html?libid=ayit',
+            'Referer': 'https://zwqd.ayit.edu.cn/',
             'Accept-Encoding': 'gzip, deflate, br',
-            'Accept-Language': 'zh-CN,zh;q=0.9'}
-        cookies = {}
+            'Accept-Language': 'zh-CN,zh;q=0.9',
+            'x-forwarded-for': '1.0.1.51'}
+        cookies = {'client_vpn_ticket': self.cookie}
         data = {}
         html = requests.get(
             url,
             headers=headers,
             verify=False,
             cookies=cookies)
-        print(html.text)
         if (len(html.text) < 40):
             QMessageBox.information(
                 self,
@@ -372,21 +396,24 @@ class auto_win(QMainWindow):
         return userid, user_name
 
     def get_away(self, userid, seatid):
-        url = 'https://www.360banke.com/xiaotu/Seatresv/CheckOut.asp?libid=ayit&seatid={}&userid={}&number=0.03153986302655798'.format(
+        url = 'https://zwqd.ayit.edu.cn/Seatresv/CheckOut.asp?libid=ayit&seatid={}&userid={}&number=0.03153986302655798'.format(
             seatid, userid)
         headers = {
-            'Host': 'www.360banke.com',
+            'Host': 'zwqd.ayit.edu.cn',
             'Connection': 'keep-alive',
-            'Origin': 'http://www.360banke.com',
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; 16th Plus Build/QKQ1.191222.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/78.0.3904.62 XWEB/2797 MMWEBSDK/20210302 Mobile Safari/537.36 MMWEBID/1946 MicroMessenger/8.0.3.1880(0x28000339) Process/toolsmp WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"',
+            'sec-ch-ua-mobile': '?0',
+            'User-Agent': 'LogStatistic',
+            'sec-ch-ua-platform': '"Windows"',
             'Accept': '*/*',
-            'X-Requested-With': 'com.tencent.mm',
-            'Sec-Fetch-Site': 'cross-site',
+            'Sec-Fetch-Site': 'same-origin',
             'Sec-Fetch-Mode': 'cors',
-            'Referer': 'http://www.360banke.com/xiaotu/index.html?seatid=A9097E62-5E85-4E71-9C24-C8EC3C281806&seatresv=1&libid=ayit&result=1&username=18031110137&openid=oMWEVxCCJqyGcEgUMPipHy5oMD-0',
-            'Accept-Encoding': 'gzip, deflate',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7'}
-        cookies = {}
+            'Sec-Fetch-Dest': 'empty',
+            'Referer': 'https://zwqd.ayit.edu.cn/',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'zh-CN,zh;q=0.9'}
+        cookies = {'ASPSESSIONIDQCAQDQAD': 'MGKFIPOCACEHLPPLKGCJLLIM',
+                   'client_vpn_ticket': self.cookie}
         data = {}
 
         html = requests.get(
@@ -397,23 +424,24 @@ class auto_win(QMainWindow):
         self.sent_txt(str(html.text))
 
     def to_cancle(self, userid, cancle_id):
-        url = 'https://www.360banke.com/xiaotu/Seatresv/CancelOrder.asp?libid=ayit&seatorderid={}&userid={}&number=0.20709293419268082'.format(
+        url = 'https://zwqd.ayit.edu.cn/Seatresv/CancelOrder.asp?libid=ayit&seatorderid={}&userid={}&number=0.20709293419268082'.format(
             cancle_id, userid)
         headers = {
-            'Host': 'www.360banke.com',
+            'Host': 'zwqd.ayit.edu.cn',
             'Connection': 'keep-alive',
-            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"',
             'sec-ch-ua-mobile': '?0',
             'User-Agent': 'LogStatistic',
+            'sec-ch-ua-platform': '"Windows"',
             'Accept': '*/*',
-            'Origin': 'http://www.360banke.com',
-            'Sec-Fetch-Site': 'cross-site',
+            'Sec-Fetch-Site': 'same-origin',
             'Sec-Fetch-Mode': 'cors',
             'Sec-Fetch-Dest': 'empty',
-            'Referer': 'http://www.360banke.com/',
+            'Referer': 'https://zwqd.ayit.edu.cn/',
             'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'zh-CN,zh;q=0.9'}
-        cookies = {}
+        cookies = {'ASPSESSIONIDQCAQDQAD': 'MGKFIPOCACEHLPPLKGCJLLIM',
+                   'client_vpn_ticket': self.cookie}
         data = {}
         html = requests.get(
             url,
@@ -423,23 +451,24 @@ class auto_win(QMainWindow):
         self.sent_txt(str(html.text))
 
     def get_cancle_id(self, userid):
-        url = 'https://www.360banke.com/xiaotu/Seatresv/GetMyOrder.asp?userid={}&number=0.7515593691892066'.format(
+        url = 'https://zwqd.ayit.edu.cn/Seatresv/GetMyOrder.asp?userid={}&number=0.7515593691892066'.format(
             userid)
         headers = {
-            'Host': 'www.360banke.com',
+            'Host': 'zwqd.ayit.edu.cn',
             'Connection': 'keep-alive',
-            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"',
             'sec-ch-ua-mobile': '?0',
             'User-Agent': 'LogStatistic',
+            'sec-ch-ua-platform': '"Windows"',
             'Accept': '*/*',
-            'Origin': 'http://www.360banke.com',
-            'Sec-Fetch-Site': 'cross-site',
+            'Sec-Fetch-Site': 'same-origin',
             'Sec-Fetch-Mode': 'cors',
             'Sec-Fetch-Dest': 'empty',
-            'Referer': 'http://www.360banke.com/',
+            'Referer': 'https://zwqd.ayit.edu.cn/',
             'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'zh-CN,zh;q=0.9'}
-        cookies = {}
+        cookies = {'ASPSESSIONIDQCAQDQAD': 'MGKFIPOCACEHLPPLKGCJLLIM',
+                   'client_vpn_ticket': self.cookie}
         data = {}
 
         html = requests.get(
